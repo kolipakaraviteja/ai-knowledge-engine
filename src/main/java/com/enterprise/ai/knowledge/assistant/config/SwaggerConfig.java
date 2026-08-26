@@ -5,6 +5,7 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,8 +24,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SwaggerConfig {
 
+    @Value("${server.url:}")
+    private String serverUrl;
+
     @Bean
     public OpenAPI customOpenAPI() {
+        String defaultServerUrl = serverUrl != null && !serverUrl.isEmpty() 
+            ? serverUrl 
+            : "http://localhost:8080";
         return new OpenAPI()
                 .info(new Info()
                         .title("Enterprise AI Knowledge Assistant API")
@@ -56,12 +63,8 @@ public class SwaggerConfig {
                         )
                 )
                 .addServersItem(new Server()
-                        .url("http://localhost:8080")
-                        .description("Local Development Server")
-                )
-                .addServersItem(new Server()
-                        .url("https://api.example.com")
-                        .description("Production Server")
+                        .url(defaultServerUrl)
+                        .description("Default Server")
                 );
     }
 }
