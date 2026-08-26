@@ -1,0 +1,71 @@
+{
+  "name": "Kaleshwaram Project Evaluation Dataset",
+  "description": "Sample evaluation test questions for the Kaleshwaram Project audit documents",
+  "tests": [
+    {
+      "name": "Kaleshwaram Project Overview",
+      "query": "What is the Kaleshwaram Project and what is its main purpose?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks from the executive summary and introduction chapters"
+    },
+    {
+      "name": "Project Cost",
+      "query": "What was the total estimated cost of the Kaleshwaram Project?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks mentioning project budget and financial details"
+    },
+    {
+      "name": "Audit Findings",
+      "query": "What were the main audit findings in the Kaleshwaram Project report?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks from the audit framework and findings sections"
+    },
+    {
+      "name": "Project Timeline",
+      "query": "When was the Kaleshwaram Project initiated and what was the expected completion timeline?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks with timeline and scheduling information"
+    },
+    {
+      "name": "Technical Specifications",
+      "query": "What are the technical specifications of the Kaleshwaram Project irrigation system?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks with technical details about the project"
+    },
+    {
+      "name": "Re-engineering",
+      "query": "What re-engineering changes were made to the PCSS Project?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks from the re-engineering chapter"
+    },
+    {
+      "name": "Planning Phase",
+      "query": "How was the planning phase for the Kaleshwaram Project conducted?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks from the planning chapter"
+    },
+    {
+      "name": "Execution Phase",
+      "query": "What challenges were faced during the execution of the Kaleshwaram Project?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks from the execution chapter"
+    },
+    {
+      "name": "Performance Audit",
+      "query": "What does the performance audit reveal about the project's efficiency?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks from performance audit sections"
+    },
+    {
+      "name": "Recommendations",
+      "query": "What recommendations were made in the audit report for the Kaleshwaram Project?",
+      "expectedChunkIds": [],
+      "notes": "Should retrieve chunks with recommendations and conclusions"
+    }
+  ],
+  "instructions": {
+    "setup": "To use this dataset, you need to first upload the Kaleshwaram Project documents to the system, then populate the expectedChunkIds for each test by running the queries and manually verifying which chunks contain the correct answers.",
+    "usage": "Use the Evaluation page in the UI to import these tests and run evaluation runs to measure retrieval performance.",
+    "expectedChunkIds": "The expectedChunkIds array should be populated with the actual chunk IDs from your database after document upload and chunking. These represent the ground truth for evaluation metrics."
+  }
+}
