@@ -5,6 +5,7 @@ import com.enterprise.ai.knowledge.assistant.logging.EmbeddingLogger;
 import com.enterprise.ai.knowledge.assistant.logging.PerformanceLogger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -14,15 +15,18 @@ public class EmbeddingService {
     private final EmbeddingModel embeddingModel;
     private final EmbeddingLogger embeddingLogger;
     private final PerformanceLogger performanceLogger;
+    private final int embeddingDimensions;
 
-    public EmbeddingService(EmbeddingModel embeddingModel, EmbeddingLogger embeddingLogger, PerformanceLogger performanceLogger) {
+    public EmbeddingService(EmbeddingModel embeddingModel, EmbeddingLogger embeddingLogger, PerformanceLogger performanceLogger,
+                           @Value("${spring.ai.openai.embedding.options.dimensions:${spring.ai.embedding.dimensions:1536}}") int embeddingDimensions) {
         this.embeddingModel = embeddingModel;
         this.embeddingLogger = embeddingLogger;
         this.performanceLogger = performanceLogger;
+        this.embeddingDimensions = embeddingDimensions;
         
-        // Log service initialization
+        // Log service initialization with actual dimensions
         String modelName = embeddingModel.getClass().getSimpleName();
-        embeddingLogger.logServiceInitialization(modelName, 0); // Dimensions will be available after first call
+        embeddingLogger.logServiceInitialization(modelName, embeddingDimensions);
     }
 
     public EmbeddingResult generateEmbedding(String text) {
