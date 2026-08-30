@@ -200,7 +200,7 @@ CREATE INDEX IF NOT EXISTS idx_document_collections_coll ON document_collections
 CREATE TABLE IF NOT EXISTS embeddings (
     id UUID PRIMARY KEY,
     content TEXT NOT NULL,
-    embedding vector(768),
+    embedding vector(1536),
     document_id VARCHAR(255),
     document_name VARCHAR(255),
     page_number INTEGER,
