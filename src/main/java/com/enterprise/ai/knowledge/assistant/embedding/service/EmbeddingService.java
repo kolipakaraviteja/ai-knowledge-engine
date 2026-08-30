@@ -18,7 +18,7 @@ public class EmbeddingService {
     private final int embeddingDimensions;
 
     public EmbeddingService(EmbeddingModel embeddingModel, EmbeddingLogger embeddingLogger, PerformanceLogger performanceLogger,
-                           @Value("${spring.ai.openai.embedding.options.dimensions:1536}") int embeddingDimensions) {
+                           @Value("${spring.ai.openai.embedding.options.dimensions:768}") int embeddingDimensions) {
         this.embeddingModel = embeddingModel;
         this.embeddingLogger = embeddingLogger;
         this.performanceLogger = performanceLogger;
