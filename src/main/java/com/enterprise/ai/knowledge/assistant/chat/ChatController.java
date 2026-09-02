@@ -95,6 +95,10 @@ public class ChatController {
                     description = "Invalid request parameters"
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Internal server error or LLM service unavailable"
             )
@@ -106,7 +110,8 @@ public class ChatController {
                     required = true,
                     example = "What is Spring Boot?"
             )
-            @RequestParam String message
+            @RequestParam String message,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId
     ) {
         chatLogger.logSimpleChatRequest(message);
         PerformanceLogger.TimingContext timing = performanceLogger.startTiming("simple_chat");
@@ -159,6 +164,10 @@ public class ChatController {
                     content = @Content(mediaType = "application/json")
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Internal server error during retrieval or LLM call"
             )
@@ -193,7 +202,8 @@ public class ChatController {
                     description = "Collection ID to scope retrieval (optional). If not provided, searches across all collections within the specified knowledge base.",
                     required = false
             )
-            @RequestParam(value = "collectionId", required = false) String collectionId
+            @RequestParam(value = "collectionId", required = false) String collectionId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId
     ) {
         chatLogger.logRagChatRequest(message, vectorTopK, finalTopN);
         PerformanceLogger.TimingContext timing = performanceLogger.startTiming("rag_chat");
@@ -323,12 +333,16 @@ public class ChatController {
                     content = @Content(mediaType = "application/json")
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Failed to create conversation"
             )
     })
-    public Object startConversation() {
-        UUID conversationId = conversationService.startConversation();
+    public Object startConversation(@org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        UUID conversationId = conversationService.startConversation(userId);
         chatLogger.logConversationStart(conversationId);
         return new java.util.HashMap<String, String>() {{
             put("conversationId", conversationId.toString());
@@ -383,7 +397,8 @@ public class ChatController {
 
     @PostMapping("/converse")
     public ChatResponse converse(@RequestParam UUID conversationId,
-                                 @Valid @RequestBody ConversationRequest request) {
+                                 @Valid @RequestBody ConversationRequest request,
+                                 @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
         int historyDepth = request.getHistoryDepth() > 0 ? request.getHistoryDepth() : 5;
         chatLogger.logConversationWithHistory(conversationId, request.getMessage(), historyDepth);
         return conversationService.chat(conversationId, request.getMessage(), historyDepth);
@@ -395,11 +410,22 @@ public class ChatController {
     @GetMapping("/conversations")
     @Operation(
             summary = "Get All Conversations",
-            description = "Retrieve list of all conversations with metadata",
+            description = "Retrieve list of all conversations for the current user with metadata",
             tags = {"Chat API"}
     )
-    public List<java.util.Map<String, Object>> getAllConversations() {
-        return conversationService.getAllConversations();
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "List of conversations retrieved"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            )
+    })
+    public List<java.util.Map<String, Object>> getAllConversations(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        return conversationService.getAllConversations(userId);
     }
 
     /**
@@ -411,10 +437,30 @@ public class ChatController {
             description = "Delete a conversation and all its messages",
             tags = {"Chat API"}
     )
-    public void deleteConversation(@PathVariable UUID conversationId) {
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Conversation deleted successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied - conversation belongs to another user"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Conversation not found"
+            )
+    })
+    public void deleteConversation(
+            @PathVariable UUID conversationId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
         chatLogger.logConversationDeletion(conversationId);
-        auditLogger.logConversationDeletion(conversationId.toString(), "anonymous", true, "Conversation deleted via API");
-        conversationService.deleteConversation(conversationId);
+        auditLogger.logConversationDeletion(conversationId.toString(), userId.toString(), true, "Conversation deleted via API");
+        conversationService.deleteConversation(conversationId, userId);
     }
 
     /**
@@ -440,9 +486,20 @@ public class ChatController {
             description = "Send a query and receive the response as a stream of text chunks",
             tags = {"Chat API"}
     )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Streaming response initiated"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            )
+    })
     public SseEmitter streamChat(
             @Parameter(description = "User query", required = true)
-            @RequestParam String message) {
+            @RequestParam String message,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
 
         chatLogger.logStreamChatStart(message);
         PerformanceLogger.TimingContext timing = performanceLogger.startTiming("stream_chat");
@@ -461,7 +518,7 @@ public class ChatController {
             emitter.completeWithError(new RuntimeException("Stream timeout"));
         });
 
-        ChatResponse response = this.ragChat(message, 20, 5, null, null);
+        ChatResponse response = this.ragChat(message, 20, 5, null, null, userId);
 
         // Tokenize (by space or custom logic)
         String[] tokens = response.getAnswer() .split("\\s+");
@@ -535,6 +592,10 @@ public class ChatController {
                     description = "Response regenerated successfully"
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            ),
+            @ApiResponse(
                     responseCode = "404",
                     description = "Conversation not found or no messages to regenerate"
             )
@@ -545,7 +606,8 @@ public class ChatController {
                     description = "ID of the conversation",
                     required = true
             )
-            @PathVariable UUID conversationId) {
+            @PathVariable UUID conversationId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
         String correlationId = CorrelationIdUtil.getCorrelationId();
         log.info("[{}] Regenerating response for conversation: {}", correlationId, conversationId);
         return conversationService.regenerateLastResponse(conversationId);
@@ -568,6 +630,10 @@ public class ChatController {
                     description = "Follow-up questions generated successfully"
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated"
+            ),
+            @ApiResponse(
                     responseCode = "404",
                     description = "Conversation not found"
             )
@@ -578,7 +644,8 @@ public class ChatController {
                     description = "ID of the conversation",
                     required = true
             )
-            @PathVariable UUID conversationId) {
+            @PathVariable UUID conversationId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
         String correlationId = CorrelationIdUtil.getCorrelationId();
         log.info("[{}] Generating follow-up questions for conversation: {}", correlationId, conversationId);
         return conversationService.generateFollowUpQuestions(conversationId);

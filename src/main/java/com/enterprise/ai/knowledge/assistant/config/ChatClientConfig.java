@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration for ChatClient supporting both OpenAI and local LM Studio LLM.
+ * Configuration for ChatClient supporting OpenAI and local LM Studio LLM.
  * <p>
  * Switch between providers using the property: app.llm.provider
  * - Set to "openai" for OpenAI API (default)
@@ -27,8 +27,7 @@ public class ChatClientConfig {
     @Bean
     @ConditionalOnProperty(
         name = "app.llm.provider",
-        havingValue = "openai",
-        matchIfMissing = true
+        havingValue = "openai"
     )
     public ChatClient openAiChatClient(ChatClient.Builder builder) {
         return builder.build();

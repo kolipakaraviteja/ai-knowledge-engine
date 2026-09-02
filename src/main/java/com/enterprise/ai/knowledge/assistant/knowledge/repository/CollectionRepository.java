@@ -38,6 +38,7 @@ public class CollectionRepository {
                 "knowledge_base_id UUID NOT NULL, " +
                 "name TEXT NOT NULL, " +
                 "description TEXT, " +
+                "owner_id UUID, " +
                 "created_at TIMESTAMP, " +
                 "updated_at TIMESTAMP, " +
                 "FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id) ON DELETE CASCADE" +
@@ -50,12 +51,12 @@ public class CollectionRepository {
         Instant now = collection.getCreatedAt() == null ? Instant.now() : collection.getCreatedAt();
         Instant updatedAt = Instant.now();
 
-        String sql = "INSERT INTO collections (id, knowledge_base_id, name, description, created_at, updated_at) " +
-                     "VALUES (?, ?, ?, ?, ?, ?) " +
-                     "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, updated_at = EXCLUDED.updated_at";
+        String sql = "INSERT INTO collections (id, knowledge_base_id, name, description, owner_id, created_at, updated_at) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?) " +
+                     "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, owner_id = EXCLUDED.owner_id, updated_at = EXCLUDED.updated_at";
 
-        jdbcTemplate.update(sql, id, collection.getKnowledgeBaseId(), collection.getName(), 
-                          collection.getDescription(), Timestamp.from(now), Timestamp.from(updatedAt));
+        jdbcTemplate.update(sql, id, collection.getKnowledgeBaseId(), collection.getName(),
+                          collection.getDescription(), collection.getOwnerId(), Timestamp.from(now), Timestamp.from(updatedAt));
 
         collection.setId(id);
         collection.setCreatedAt(now);
@@ -64,7 +65,7 @@ public class CollectionRepository {
     }
 
     public Optional<Collection> findById(UUID id) {
-        String sql = "SELECT id, knowledge_base_id, name, description, created_at, updated_at FROM collections WHERE id = ?";
+        String sql = "SELECT id, knowledge_base_id, name, description, owner_id, created_at, updated_at FROM collections WHERE id = ?";
         try {
             Collection coll = jdbcTemplate.queryForObject(sql, collectionRowMapper(), id);
             return Optional.ofNullable(coll);
@@ -74,13 +75,13 @@ public class CollectionRepository {
     }
 
     public List<Collection> findByKnowledgeBaseId(UUID knowledgeBaseId) {
-        String sql = "SELECT id, knowledge_base_id, name, description, created_at, updated_at " +
+        String sql = "SELECT id, knowledge_base_id, name, description, owner_id, created_at, updated_at " +
                      "FROM collections WHERE knowledge_base_id = ? ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, collectionRowMapper(), knowledgeBaseId);
     }
 
     public List<Collection> findAll() {
-        String sql = "SELECT id, knowledge_base_id, name, description, created_at, updated_at FROM collections ORDER BY created_at DESC";
+        String sql = "SELECT id, knowledge_base_id, name, description, owner_id, created_at, updated_at FROM collections ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, collectionRowMapper());
     }
 
@@ -95,6 +96,7 @@ public class CollectionRepository {
             (UUID) rs.getObject("knowledge_base_id"),
             rs.getString("name"),
             rs.getString("description"),
+            (UUID) rs.getObject("owner_id"),
             rs.getTimestamp("created_at").toInstant(),
             rs.getTimestamp("updated_at").toInstant()
         );

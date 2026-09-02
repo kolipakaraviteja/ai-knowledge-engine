@@ -28,15 +28,17 @@ public class KnowledgeBaseController {
     @Operation(summary = "Create Knowledge Base", description = "Create a new knowledge base")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Knowledge base created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid request")
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
     public ResponseEntity<KnowledgeBase> createKnowledgeBase(
             @Parameter(description = "Knowledge base name", required = true)
             @RequestParam String name,
             @Parameter(description = "Knowledge base description")
-            @RequestParam(required = false) String description) {
-        log.info("Creating knowledge base: {}", name);
-        KnowledgeBase kb = knowledgeBaseService.createKnowledgeBase(name, description);
+            @RequestParam(required = false) String description,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        log.info("Creating knowledge base: {} for user: {}", name, userId);
+        KnowledgeBase kb = knowledgeBaseService.createKnowledgeBase(name, description, userId);
         return ResponseEntity.ok(kb);
     }
 
@@ -44,29 +46,33 @@ public class KnowledgeBaseController {
     @Operation(summary = "Get Knowledge Base", description = "Get a knowledge base by ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Knowledge base found"),
-            @ApiResponse(responseCode = "404", description = "Knowledge base not found")
+            @ApiResponse(responseCode = "404", description = "Knowledge base not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<KnowledgeBase> getKnowledgeBase(
             @Parameter(description = "Knowledge base ID", required = true)
-            @PathVariable UUID id) {
-        log.info("Fetching knowledge base with id: {}", id);
-        return knowledgeBaseService.getKnowledgeBase(id)
+            @PathVariable UUID id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        log.info("Fetching knowledge base with id: {} for user: {}", id, userId);
+        return knowledgeBaseService.getKnowledgeBase(id, userId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> {
-                    log.warn("Knowledge base not found with id: {}", id);
+                    log.warn("Knowledge base not found or access denied with id: {}", id);
                     return ResponseEntity.notFound().build();
                 });
     }
 
     @GetMapping
-    @Operation(summary = "List Knowledge Bases", description = "Get all knowledge bases")
+    @Operation(summary = "List Knowledge Bases", description = "Get all knowledge bases for current user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of knowledge bases")
+            @ApiResponse(responseCode = "200", description = "List of knowledge bases"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
-    public ResponseEntity<List<KnowledgeBase>> getAllKnowledgeBases() {
-        log.info("Fetching all knowledge bases");
-        List<KnowledgeBase> bases = knowledgeBaseService.getAllKnowledgeBases();
-        log.info("Retrieved {} knowledge base(s)", bases.size());
+    public ResponseEntity<List<KnowledgeBase>> getAllKnowledgeBases(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        log.info("Fetching knowledge bases for user: {}", userId);
+        List<KnowledgeBase> bases = knowledgeBaseService.getAllKnowledgeBases(userId);
+        log.info("Retrieved {} knowledge base(s) for user: {}", bases.size(), userId);
         return ResponseEntity.ok(bases);
     }
 
@@ -74,7 +80,8 @@ public class KnowledgeBaseController {
     @Operation(summary = "Update Knowledge Base", description = "Update a knowledge base")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Knowledge base updated successfully"),
-            @ApiResponse(responseCode = "404", description = "Knowledge base not found")
+            @ApiResponse(responseCode = "404", description = "Knowledge base not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<KnowledgeBase> updateKnowledgeBase(
             @Parameter(description = "Knowledge base ID", required = true)
@@ -82,14 +89,15 @@ public class KnowledgeBaseController {
             @Parameter(description = "Knowledge base name", required = true)
             @RequestParam String name,
             @Parameter(description = "Knowledge base description")
-            @RequestParam(required = false) String description) {
-        log.info("Updating knowledge base with id: {}", id);
+            @RequestParam(required = false) String description,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        log.info("Updating knowledge base with id: {} for user: {}", id, userId);
         try {
-            KnowledgeBase kb = knowledgeBaseService.updateKnowledgeBase(id, name, description);
+            KnowledgeBase kb = knowledgeBaseService.updateKnowledgeBase(id, name, description, userId);
             log.info("Knowledge base updated successfully with id: {}", id);
             return ResponseEntity.ok(kb);
         } catch (IllegalArgumentException e) {
-            log.warn("Knowledge base not found for update with id: {}", id);
+            log.warn("Knowledge base not found or access denied for update with id: {}", id);
             return ResponseEntity.notFound().build();
         }
     }
@@ -98,14 +106,21 @@ public class KnowledgeBaseController {
     @Operation(summary = "Delete Knowledge Base", description = "Delete a knowledge base")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Knowledge base deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Knowledge base not found")
+            @ApiResponse(responseCode = "404", description = "Knowledge base not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<Void> deleteKnowledgeBase(
             @Parameter(description = "Knowledge base ID", required = true)
-            @PathVariable UUID id) {
-        log.info("Deleting knowledge base with id: {}", id);
-        knowledgeBaseService.deleteKnowledgeBase(id);
-        log.info("Knowledge base deleted successfully with id: {}", id);
-        return ResponseEntity.ok().build();
+            @PathVariable UUID id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
+        log.info("Deleting knowledge base with id: {} for user: {}", id, userId);
+        try {
+            knowledgeBaseService.deleteKnowledgeBase(id, userId);
+            log.info("Knowledge base deleted successfully with id: {}", id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Knowledge base not found or access denied for delete with id: {}", id);
+            return ResponseEntity.notFound().build();
+        }
     }
 }

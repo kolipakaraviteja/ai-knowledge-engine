@@ -7,15 +7,17 @@ import java.util.UUID;
 public class Conversation {
     private UUID id;
     private String title;
+    private UUID ownerId;
     private Instant createdAt;
     private Instant updatedAt;
     private Map<String, Object> metadata;
 
     public Conversation() {}
 
-    public Conversation(UUID id, String title, Instant createdAt, Instant updatedAt, Map<String, Object> metadata) {
+    public Conversation(UUID id, String title, UUID ownerId, Instant createdAt, Instant updatedAt, Map<String, Object> metadata) {
         this.id = id;
         this.title = title;
+        this.ownerId = ownerId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.metadata = metadata;
@@ -26,6 +28,9 @@ public class Conversation {
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID ownerId) { this.ownerId = ownerId; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

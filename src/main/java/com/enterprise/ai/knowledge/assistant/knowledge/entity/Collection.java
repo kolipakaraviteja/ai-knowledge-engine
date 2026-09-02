@@ -8,16 +8,18 @@ public class Collection {
     private UUID knowledgeBaseId;
     private String name;
     private String description;
+    private UUID ownerId;
     private Instant createdAt;
     private Instant updatedAt;
 
     public Collection() {}
 
-    public Collection(UUID id, UUID knowledgeBaseId, String name, String description, Instant createdAt, Instant updatedAt) {
+    public Collection(UUID id, UUID knowledgeBaseId, String name, String description, UUID ownerId, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.knowledgeBaseId = knowledgeBaseId;
         this.name = name;
         this.description = description;
+        this.ownerId = ownerId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -33,6 +35,9 @@ public class Collection {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID ownerId) { this.ownerId = ownerId; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

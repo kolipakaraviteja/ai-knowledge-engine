@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Document Management REST API Controller with Swagger Documentation
@@ -86,6 +87,10 @@ public class DocumentController {
             description = "Invalid file format or file too large"
         ),
         @ApiResponse(
+            responseCode = "401",
+            description = "Not authenticated"
+        ),
+        @ApiResponse(
             responseCode = "500",
             description = "Error during file processing or embedding"
         )
@@ -108,7 +113,8 @@ public class DocumentController {
             description = "Collection ID (optional, uses default if not provided)",
             required = false
         )
-        @RequestParam(value = "collectionId", required = false) String collectionId
+        @RequestParam(value = "collectionId", required = false) String collectionId,
+        @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId
     ) {
         try {
             // Validate file upload
@@ -177,13 +183,18 @@ public class DocumentController {
             )
         ),
         @ApiResponse(
+            responseCode = "401",
+            description = "Not authenticated"
+        ),
+        @ApiResponse(
             responseCode = "500",
             description = "Error retrieving documents"
         )
     })
-    public ResponseEntity<List<DocumentMetadata>> listDocuments() {
+    public ResponseEntity<List<DocumentMetadata>> listDocuments(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId) {
         try {
-            log.info("Listing all documents");
+            log.info("Listing all documents for user: {}", userId);
             List<DocumentMetadata> documents = documentUploadService.listDocuments();
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
@@ -210,6 +221,10 @@ public class DocumentController {
             description = "Document deleted successfully"
         ),
         @ApiResponse(
+            responseCode = "401",
+            description = "Not authenticated"
+        ),
+        @ApiResponse(
             responseCode = "404",
             description = "Document not found"
         ),
@@ -225,16 +240,17 @@ public class DocumentController {
             required = true,
             example = "doc-123"
         )
-        @PathVariable String documentId
+        @PathVariable String documentId,
+        @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId
     ) {
         try {
-            log.info("Deleting document: {}", documentId);
+            log.info("Deleting document: {} for user: {}", documentId, userId);
             documentUploadService.deleteDocument(documentId);
-            auditLogger.logDocumentDeletion(documentId, "unknown", "anonymous", true, "Document deleted successfully");
+            auditLogger.logDocumentDeletion(documentId, "unknown", userId.toString(), true, "Document deleted successfully");
             return ResponseEntity.ok(Map.of("status", "deleted", "documentId", documentId));
         } catch (Exception e) {
             log.error("Error deleting document", e);
-            auditLogger.logDocumentDeletion(documentId, "unknown", "anonymous", false, e.getMessage());
+            auditLogger.logDocumentDeletion(documentId, "unknown", userId.toString(), false, e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
@@ -263,6 +279,10 @@ public class DocumentController {
             )
         ),
         @ApiResponse(
+            responseCode = "401",
+            description = "Not authenticated"
+        ),
+        @ApiResponse(
             responseCode = "404",
             description = "Document not found"
         ),
@@ -278,10 +298,11 @@ public class DocumentController {
             required = true,
             example = "doc-123"
         )
-        @PathVariable String documentId
+        @PathVariable String documentId,
+        @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId
     ) {
         try {
-            log.info("Re-indexing document: {}", documentId);
+            log.info("Re-indexing document: {} for user: {}", documentId, userId);
             documentUploadService.reindexDocument(documentId);
             return ResponseEntity.ok(Map.of("status", "reindexing", "documentId", documentId));
         } catch (Exception e) {
@@ -309,6 +330,10 @@ public class DocumentController {
             content = @Content(mediaType = "application/json")
         ),
         @ApiResponse(
+            responseCode = "401",
+            description = "Not authenticated"
+        ),
+        @ApiResponse(
             responseCode = "404",
             description = "Document not found"
         )
@@ -320,10 +345,11 @@ public class DocumentController {
             required = true,
             example = "doc-123"
         )
-        @PathVariable String documentId
+        @PathVariable String documentId,
+        @org.springframework.security.core.annotation.AuthenticationPrincipal UUID userId
     ) {
         try {
-            log.info("Getting metadata for document: {}", documentId);
+            log.info("Getting metadata for document: {} for user: {}", documentId, userId);
             Map<String, Object> metadata = documentUploadService.getDocumentMetadata(documentId);
             return ResponseEntity.ok(metadata);
         } catch (Exception e) {

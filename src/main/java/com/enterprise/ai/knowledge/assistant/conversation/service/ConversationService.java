@@ -60,8 +60,8 @@ public class ConversationService {
         this.performanceLogger = performanceLogger;
     }
 
-    public UUID createConversation() {
-        UUID conversationId = conversationRepository.createConversation("New Conversation");
+    public UUID createConversation(UUID ownerId) {
+        UUID conversationId = conversationRepository.createConversation("New Conversation", ownerId);
         chatLogger.logConversationStart(conversationId);
         return conversationId;
     }
@@ -150,19 +150,23 @@ public class ConversationService {
         return chat(conversationId, userMessage, 5);
     }
 
-    public UUID startConversation() {
-        return createConversation();
+    public UUID startConversation(UUID ownerId) {
+        return createConversation(ownerId);
     }
 
     public List<ChatResponse> getConversationHistory(UUID conversationId) {
         return conversationRepository.getConversationHistory(conversationId);
     }
 
-    public List<Map<String, Object>> getAllConversations() {
-        return conversationRepository.getAllConversations();
+    public List<Map<String, Object>> getAllConversations(UUID userId) {
+        return conversationRepository.getAllConversations(userId);
     }
 
-    public void deleteConversation(UUID conversationId) {
+    public void deleteConversation(UUID conversationId, UUID userId) {
+        // Check ownership
+        if (!conversationRepository.isOwner(conversationId, userId)) {
+            throw new IllegalArgumentException("Access denied: Conversation belongs to another user");
+        }
         chatLogger.logConversationDeletion(conversationId);
         conversationRepository.deleteConversation(conversationId);
     }

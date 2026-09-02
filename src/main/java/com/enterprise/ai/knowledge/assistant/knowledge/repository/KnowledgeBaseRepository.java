@@ -27,6 +27,7 @@ public class KnowledgeBaseRepository {
                 "id UUID PRIMARY KEY, " +
                 "name TEXT NOT NULL, " +
                 "description TEXT, " +
+                "owner_id UUID, " +
                 "created_at TIMESTAMP, " +
                 "updated_at TIMESTAMP" +
                 ")";
@@ -38,11 +39,11 @@ public class KnowledgeBaseRepository {
         Instant now = knowledgeBase.getCreatedAt() == null ? Instant.now() : knowledgeBase.getCreatedAt();
         Instant updatedAt = Instant.now();
 
-        String sql = "INSERT INTO knowledge_bases (id, name, description, created_at, updated_at) " +
-                     "VALUES (?, ?, ?, ?, ?) " +
-                     "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, updated_at = EXCLUDED.updated_at";
+        String sql = "INSERT INTO knowledge_bases (id, name, description, owner_id, created_at, updated_at) " +
+                     "VALUES (?, ?, ?, ?, ?, ?) " +
+                     "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, owner_id = EXCLUDED.owner_id, updated_at = EXCLUDED.updated_at";
 
-        jdbcTemplate.update(sql, id, knowledgeBase.getName(), knowledgeBase.getDescription(), 
+        jdbcTemplate.update(sql, id, knowledgeBase.getName(), knowledgeBase.getDescription(), knowledgeBase.getOwnerId(),
                           Timestamp.from(now), Timestamp.from(updatedAt));
 
         knowledgeBase.setId(id);
@@ -52,7 +53,7 @@ public class KnowledgeBaseRepository {
     }
 
     public Optional<KnowledgeBase> findById(UUID id) {
-        String sql = "SELECT id, name, description, created_at, updated_at FROM knowledge_bases WHERE id = ?";
+        String sql = "SELECT id, name, description, owner_id, created_at, updated_at FROM knowledge_bases WHERE id = ?";
         try {
             KnowledgeBase kb = jdbcTemplate.queryForObject(sql, knowledgeBaseRowMapper(), id);
             return Optional.ofNullable(kb);
@@ -62,8 +63,13 @@ public class KnowledgeBaseRepository {
     }
 
     public List<KnowledgeBase> findAll() {
-        String sql = "SELECT id, name, description, created_at, updated_at FROM knowledge_bases ORDER BY created_at DESC";
+        String sql = "SELECT id, name, description, owner_id, created_at, updated_at FROM knowledge_bases ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, knowledgeBaseRowMapper());
+    }
+
+    public List<KnowledgeBase> findByOwnerId(UUID ownerId) {
+        String sql = "SELECT id, name, description, owner_id, created_at, updated_at FROM knowledge_bases WHERE owner_id = ? ORDER BY created_at DESC";
+        return jdbcTemplate.query(sql, knowledgeBaseRowMapper(), ownerId);
     }
 
     public void deleteById(UUID id) {
@@ -76,6 +82,7 @@ public class KnowledgeBaseRepository {
             (UUID) rs.getObject("id"),
             rs.getString("name"),
             rs.getString("description"),
+            (UUID) rs.getObject("owner_id"),
             rs.getTimestamp("created_at").toInstant(),
             rs.getTimestamp("updated_at").toInstant()
         );

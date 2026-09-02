@@ -30,6 +30,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
         String sql = "CREATE TABLE IF NOT EXISTS conversations (" +
                 "id UUID PRIMARY KEY, " +
                 "title TEXT, " +
+                "owner_id UUID, " +
                 "created_at TIMESTAMP, " +
                 "updated_at TIMESTAMP, " +
                 "metadata JSONB" +
@@ -54,17 +55,17 @@ public class ConversationRepositoryImpl implements ConversationRepository {
 
     }
     @Override
-    public UUID createConversation(String title) {
+    public UUID createConversation(String title, UUID ownerId) {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
-        String sql = "INSERT INTO conversations (id, title, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?::jsonb)";
-        jdbcTemplate.update(sql, id, title, Timestamp.from(now), Timestamp.from(now), "{}");
+        String sql = "INSERT INTO conversations (id, title, owner_id, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?, ?::jsonb)";
+        jdbcTemplate.update(sql, id, title, ownerId, Timestamp.from(now), Timestamp.from(now), "{}");
         return id;
     }
 
     @Override
     public Optional<Conversation> getConversation(UUID conversationId) {
-        String sql = "SELECT id, title, created_at, updated_at, metadata FROM conversations WHERE id = ?";
+        String sql = "SELECT id, title, owner_id, created_at, updated_at, metadata FROM conversations WHERE id = ?";
         try {
             Conversation conv = jdbcTemplate.queryForObject(sql, conversationRowMapper(), conversationId);
             return Optional.ofNullable(conv);
@@ -129,11 +130,11 @@ public class ConversationRepositoryImpl implements ConversationRepository {
     }
 
     @Override
-    public List<Map<String, Object>> getAllConversations() {
+    public List<Map<String, Object>> getAllConversations(UUID userId) {
         String sql = "SELECT id, title, created_at, " +
                      "(SELECT MAX(created_at) FROM conversation_messages WHERE conversation_id = c.id) as last_activity, " +
                      "(SELECT COUNT(*) FROM conversation_messages WHERE conversation_id = c.id) as message_count " +
-                     "FROM conversations c ORDER BY created_at DESC";
+                     "FROM conversations c WHERE owner_id = ? ORDER BY created_at DESC";
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", rs.getObject("id"));
@@ -148,7 +149,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
             }
             map.put("messageCount", rs.getInt("message_count"));
             return map;
-        });
+        }, userId);
     }
 
     @Override
@@ -158,6 +159,13 @@ public class ConversationRepositoryImpl implements ConversationRepository {
 
         String deleteConvSql = "DELETE FROM conversations WHERE id = ?";
         jdbcTemplate.update(deleteConvSql, conversationId);
+    }
+
+    @Override
+    public boolean isOwner(UUID conversationId, UUID userId) {
+        String sql = "SELECT COUNT(*) FROM conversations WHERE id = ? AND owner_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, conversationId, userId);
+        return count != null && count > 0;
     }
 
     @Override
@@ -205,6 +213,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
         return (rs, rowNum) -> new Conversation(
             (UUID) rs.getObject("id"),
             rs.getString("title"),
+            (UUID) rs.getObject("owner_id"),
             rs.getTimestamp("created_at").toInstant(),
             rs.getTimestamp("updated_at").toInstant(),
             null
